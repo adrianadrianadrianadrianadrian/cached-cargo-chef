@@ -1,0 +1,37 @@
+name: Cached Cloud Build
+
+on:
+  push:
+    branches: 
+      - master
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create Build Id
+        run: echo "BUILD_ID=$(date +%Y%m%d%H%I%S)" >> $GITHUB_ENV
+      - name: Docker login
+        run: docker login -u adriang123 -p ${{ secrets.DOCKER_TOKEN }} docker.io
+      - name: Build & Push Recipe
+        working-directory: example
+        run: |
+          docker pull adriang123/example-recipe
+          docker build --cache-from adriang123/example-recipe -f recipe.Dockerfile -t adriang123/example-recipe .
+          docker push adriang123/example-recipe
+      - name: Build & Push Dependencies
+        working-directory: example
+        run: |
+          docker create --name tmp-recipe adriang123/example-recipe
+          docker cp tmp-recipe:/plan/recipe.json .
+          docker pull adriang123/example-build
+          docker build --cache-from adriang123/example-build -f build.Dockerfile -t adriang123/example-build .
+          docker push adriang123/example-build
+      - name: Build & Push Application
+        working-directory: example
+        run: |
+          docker build -f Dockerfile -t adriang123/example -t adriang123/example:"$BUILD_ID" --build-arg BUILDIMAGE=example-build .
+          docker push adriang123/example:"$BUILD_ID"
