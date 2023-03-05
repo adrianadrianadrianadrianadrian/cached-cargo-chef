@@ -19,7 +19,7 @@ jobs:
       - name: Build & Push Recipe
         working-directory: example
         run: |
-          docker pull adriang123/example-recipe
+          docker pull adriang123/example-recipe || "Recipe not found."
           docker build --cache-from adriang123/example-recipe -f recipe.Dockerfile -t adriang123/example-recipe .
           docker push adriang123/example-recipe
       - name: Build & Push Dependencies
@@ -27,7 +27,8 @@ jobs:
         run: |
           docker create --name tmp-recipe adriang123/example-recipe
           docker cp tmp-recipe:/plan/recipe.json .
-          docker pull adriang123/example-build
+
+          docker pull adriang123/example-build || "Build not found."
           docker build --cache-from adriang123/example-build -f build.Dockerfile -t adriang123/example-build .
           docker push adriang123/example-build
       - name: Build & Push Application
